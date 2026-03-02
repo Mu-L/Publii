@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.3.0.0] - 2026-03-02
+### Added
+- Full keyboard navigation support for the main menu (Tab, Enter, and Space keys).
+- Interactive menu separators with `role="button"` for better accessibility.
+
+### Improved
+- Pagination accessibility with screen reader labels and navigation attributes.
+
+## [3.2.2.0] - 2026-02-03
+### Fixed
+- Fixed an issue with image centering inside the post body.
+
 ## [3.2.1.0] - 2026-01-06
 ### Fixed
 - Fixed an issue where the search popup would not open if the input element was missing
