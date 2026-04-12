@@ -3,6 +3,9 @@ const path = require('path');
 const FileHelper = require('../helpers/file.js');
 const ipcMain = require('electron').ipcMain;
 const Page = require('../page.js');
+const PathValidator = require('../helpers/path-validator.js');
+
+const { isValidDirSegment, resolveValidPath } = PathValidator;
 
 /*
  * Events for the IPC communication regarding pages
@@ -83,9 +86,14 @@ class PageEvents {
 
         // Load pages hierarchy
         ipcMain.on('app-pages-hierarchy-load', (event, siteName) => {
-            let pagesFile = path.join(this.app.sitesDir, siteName, 'input', 'config', 'pages.config.json');
+            if (!isValidDirSegment(siteName)) {
+                event.sender.send('app-pages-hierarchy-loaded', null);
+                return;
+            }
 
-            if (fs.existsSync(pagesFile)) {
+            let pagesFile = resolveValidPath(this.app.sitesDir, siteName, 'input', 'config', 'pages.config.json');
+
+            if (pagesFile && fs.existsSync(pagesFile)) {
                 let pagesHierarchy = JSON.parse(FileHelper.readFileSync(pagesFile, { encoding: 'utf8' }));
                 pagesHierarchy = this.removeDuplicatedDataFromHierarchy(pagesHierarchy);
                 event.sender.send('app-pages-hierarchy-loaded', pagesHierarchy);
@@ -96,7 +104,16 @@ class PageEvents {
 
         // Save pages hierarchy
         ipcMain.on('app-pages-hierarchy-save', (event, pagesData) => {
-            let pagesFile = path.join(this.app.sitesDir, pagesData.siteName, 'input', 'config', 'pages.config.json');
+            if (!pagesData || !isValidDirSegment(pagesData.siteName)) {
+                return;
+            }
+
+            let pagesFile = resolveValidPath(this.app.sitesDir, pagesData.siteName, 'input', 'config', 'pages.config.json');
+
+            if (!pagesFile) {
+                return;
+            }
+
             pagesData.hierarchy = this.removeNullDataFromHierarchy(pagesData.hierarchy);
             pagesData.hierarchy = this.removeDuplicatedDataFromHierarchy(pagesData.hierarchy);
             fs.writeFileSync(pagesFile, JSON.stringify(pagesData.hierarchy, null, 4), { encoding: 'utf8' });
@@ -104,7 +121,16 @@ class PageEvents {
 
         // Update pages hierarchy during post conversion
         ipcMain.on('app-pages-hierarchy-update', (event, conversionData) => {
-            let pagesFile = path.join(this.app.sitesDir, conversionData.siteName, 'input', 'config', 'pages.config.json');
+            if (!conversionData || !isValidDirSegment(conversionData.siteName)) {
+                return;
+            }
+
+            let pagesFile = resolveValidPath(this.app.sitesDir, conversionData.siteName, 'input', 'config', 'pages.config.json');
+
+            if (!pagesFile) {
+                return;
+            }
+
             let pagesHierarchy = JSON.parse(FileHelper.readFileSync(pagesFile, { encoding: 'utf8' }));
 
             for (let i = 0; i < conversionData.postIDs.length; i++) {
@@ -113,7 +139,7 @@ class PageEvents {
                     subpages: []
                 });
             }
-            
+
             pagesHierarchy = this.removeNullDataFromHierarchy(pagesHierarchy);
             pagesHierarchy = this.removeDuplicatedDataFromHierarchy(pagesHierarchy);
             fs.writeFileSync(pagesFile, JSON.stringify(pagesHierarchy, null, 4), { encoding: 'utf8' });
